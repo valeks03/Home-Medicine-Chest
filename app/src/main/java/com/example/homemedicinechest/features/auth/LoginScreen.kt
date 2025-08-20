@@ -7,8 +7,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.homemedicinechest.R
 
 @Composable
 fun LoginScreen(
@@ -24,24 +26,28 @@ fun LoginScreen(
 
     Scaffold { padding ->
         Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
             ) {
                 Text("Home Medicine Chest", style = MaterialTheme.typography.headlineSmall)
 
                 OutlinedTextField(
                     value = email, onValueChange = { email = it },
-                    label = { Text("Email") }, singleLine = true,
+                    label = { Text(stringResource(R.string.email)) }, singleLine = true,
                     enabled = !isLoading, modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = pass, onValueChange = { pass = it },
-                    label = { Text("Пароль") }, singleLine = true,
+                    label = { Text(stringResource(R.string.password)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     enabled = !isLoading, modifier = Modifier.fillMaxWidth()
                 )
@@ -50,18 +56,18 @@ fun LoginScreen(
                     Button(
                         onClick = { onLogin(email.trim(), pass) },
                         enabled = !isLoading, modifier = Modifier.weight(1f)
-                    ) { Text("Войти") }
+                    ) { Text(stringResource(R.string.sign_in)) }
 
                     OutlinedButton(
                         onClick = { onRegister(email.trim(), pass) },
                         enabled = !isLoading, modifier = Modifier.weight(1f)
-                    ) { Text("Регистрация") }
+                    ) { Text(stringResource(R.string.registration)) }
                 }
 
                 TextButton(
                     onClick = { showReset = true },
                     enabled = !isLoading
-                ) { Text("Забыли пароль?") }
+                ) { Text(stringResource(R.string.forget_password)) }
 
                 if (message != null) {
                     Text(message, color = MaterialTheme.colorScheme.error)
@@ -70,7 +76,9 @@ fun LoginScreen(
 
             if (isLoading) {
                 Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.Center
                 ) { CircularProgressIndicator() }
             }
@@ -97,34 +105,36 @@ private fun ResetPasswordDialog(
 ) {
     var email by remember { mutableStateOf(emailPrefill) }
     var newPass by remember { mutableStateOf("") }
-    var secret by remember { mutableStateOf("0000") } // учебный секрет
+    var secret by remember { mutableStateOf("0000") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Восстановить пароль") },
+        title = { Text(stringResource(R.string.reset_password)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = email, onValueChange = { email = it },
-                    label = { Text("Email") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.email)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = newPass, onValueChange = { newPass = it },
-                    label = { Text("Новый пароль") }, singleLine = true,
+                    label = { Text(stringResource(R.string.new_password)) }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = secret, onValueChange = { secret = it },
-                    label = { Text("Секретный код") }, singleLine = true,
+                    label = { Text(stringResource(R.string.secret_code)) }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("В учебном проекте код по умолчанию — 0000", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.code_is_0000), style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSubmit(email.trim(), newPass, secret.trim()) }) { Text("Сменить") }
+            TextButton(onClick = { onSubmit(email.trim(), newPass, secret.trim()) }) { Text(
+                stringResource(R.string.change)
+            ) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

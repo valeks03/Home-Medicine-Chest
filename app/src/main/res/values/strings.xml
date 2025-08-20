@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Home Medicine Chest</string>
+    <string name="sign_in">Войти</string>
+    <string name="registration">Регистрация</string>
+    <string name="forget_password">Забыли пароль?</string>
+    <string name="reset_password">Восстановить пароль</string>
+    <string name="email">Email</string>
+    <string name="new_password">Новый пароль</string>
+    <string name="secret_code">Секретный код</string>
+    <string name="cancel">Отмена</string>
+    <string name="code_is_0000">В учебном проекте код по умолчанию — 0000</string>
+    <string name="password">Пароль</string>
+    <string name="change">Сменить</string>
 </resources>

@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.homemedicinechest.App
 import com.example.homemedicinechest.data.repo.UserRepository
+import com.example.homemedicinechest.features.medicines.MedicinesScreen
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity(), AuthView {
@@ -55,16 +56,13 @@ class MainActivity : ComponentActivity(), AuthView {
                         )
                     }
 
-                    // Временная заглушка экрана лекарств — заменим позже на полноценный экран
+
                     composable(
                         route = "medicines/{userId}",
-                        arguments = listOf(
-                            androidx.navigation.navArgument("userId") {
-                                type = NavType.LongType
-                            }
-                        )
-                    ) {
-                        MedicinesPlaceholder()
+                        arguments = listOf(androidx.navigation.navArgument("userId"){ type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
+                        MedicinesScreen(userId = userId)
                     }
                 }
             }
