@@ -11,4 +11,5 @@
     <string name="code_is_0000">В учебном проекте код по умолчанию — 0000</string>
     <string name="password">Пароль</string>
     <string name="change">Сменить</string>
+    <string name="home_medicine_chest">Home Medicine Chest</string>
 </resources>

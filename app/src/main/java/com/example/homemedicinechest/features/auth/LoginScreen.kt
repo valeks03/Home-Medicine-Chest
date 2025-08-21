@@ -2,12 +2,15 @@ package com.example.homemedicinechest.features.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.homemedicinechest.R
@@ -38,17 +41,26 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp)
             ) {
-                Text("Home Medicine Chest", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.home_medicine_chest), style = MaterialTheme.typography.headlineSmall)
 
                 OutlinedTextField(
                     value = email, onValueChange = { email = it },
-                    label = { Text(stringResource(R.string.email)) }, singleLine = true,
-                    enabled = !isLoading, modifier = Modifier.fillMaxWidth()
+                    label = { Text(stringResource(R.string.email)) },
+                    singleLine = true,
+                    enabled = !isLoading,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Next
+                    ),
+                    modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = pass, onValueChange = { pass = it },
-                    label = { Text(stringResource(R.string.password)) }, singleLine = true,
+                    label = { Text(stringResource(R.string.password)) },
+                    singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done
+                    ),
                     enabled = !isLoading, modifier = Modifier.fillMaxWidth()
                 )
 
