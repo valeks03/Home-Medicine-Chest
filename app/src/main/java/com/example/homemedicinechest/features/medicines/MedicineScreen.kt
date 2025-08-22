@@ -1,18 +1,25 @@
 package com.example.homemedicinechest.features.medicines
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.unit.sp
 import com.example.homemedicinechest.App
+import com.example.homemedicinechest.R
 import com.example.homemedicinechest.data.db.Medicine
 import com.example.homemedicinechest.data.repo.MedicinesRepository
+import com.example.homemedicinechest.ui.theme.* // Purple40, Lavender, etc.
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,7 +35,6 @@ fun MedicinesScreen(userId: Long) {
     var editing by remember { mutableStateOf<Medicine?>(null) }
     val scope = rememberCoroutineScope()
 
-    // Имитация View слоя MVP
     val view = remember {
         object : MedicinesView {
             override fun showLoading(show: Boolean) {}
@@ -44,37 +50,55 @@ fun MedicinesScreen(userId: Long) {
     }
 
     Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { editing = null; showEditor = true }) {
-                Text("+")
-            }
-        }
-    ) { p ->
-        Column(Modifier.fillMaxSize().padding(p)) {
-
+        topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Лекарства") },
+                title = { Text(stringResource(R.string.home_medicine_chest)) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = Color(0xFF6650A4),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { editing = null; showEditor = true },
+                modifier = Modifier
+                    .padding(8.dp)
+            ) {
+                Text("+", fontSize = 20.sp)
+            }
+        }
+    ) { innerPadding ->
+        // Добавим пустого места под FAB, чтобы он не перекрывал последнюю карточку
+        val extraFabSpace = 104.dp
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp), // общий боковой отступ
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 8.dp,
+                bottom = innerPadding.calculateBottomPadding() + extraFabSpace
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             if (list.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Добавьте первое лекарство")
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillParentMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) { Text("Добавьте первое лекарство") }
                 }
             } else {
-                LazyColumn(
-                    Modifier.fillMaxSize().padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(list) { m ->
-                        MedicineCard(
-                            m,
-                            onClick = { editing = m; showEditor = true },
-                            onDelete = { scope.launch { presenter.delete(m) } }
-                        )
-                    }
+                items(list) { m ->
+                    MedicineCard(
+                        m,
+                        onClick = { editing = m; showEditor = true },
+                        onDelete = { scope.launch { presenter.delete(m) } }
+                    )
                 }
             }
         }
@@ -102,7 +126,16 @@ private fun MedicineCard(
     onDelete: () -> Unit
 ) {
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
-    ElevatedCard(Modifier.fillMaxWidth().clickable { onClick() }) {
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp), // аккуратная тень
+        border = BorderStroke(1.dp, Purple40.copy(alpha = 0.30f))        // тонкая окантовка
+    ) {
         Column(Modifier.padding(12.dp)) {
             Text(m.name, style = MaterialTheme.typography.titleMedium)
             Text("${m.dosage} · Остаток: ${m.stockQty}", style = MaterialTheme.typography.bodyMedium)

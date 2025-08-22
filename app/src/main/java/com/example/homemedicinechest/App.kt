@@ -19,17 +19,14 @@ class App : Application() {
             "homemed.db"
         ).build()
 
-        // Канал уведомлений (Android 8+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "reminders",
-                "Reminders",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Напоминания о приёме лекарств"
-            }
-            val nm = getSystemService(NotificationManager::class.java)
-            nm.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            "reminders",
+            "Reminders",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Напоминания о приёме лекарств"
         }
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(channel)
     }
 }
