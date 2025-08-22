@@ -130,57 +130,49 @@ fun MedicineEditDialog(
 
                 // Срок годности + подсветка
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = {
-                        val now = Calendar.getInstance()
-                        DatePickerDialog(ctx, { _, y, m, d ->
-                            val c = Calendar.getInstance()
-                            c.set(Calendar.YEAR, y)
-                            c.set(Calendar.MONTH, m)
-                            c.set(Calendar.DAY_OF_MONTH, d)
-                            c.set(Calendar.HOUR_OF_DAY, 12)
-                            c.set(Calendar.MINUTE, 0)
-                            c.set(Calendar.SECOND, 0)
-                            c.set(Calendar.MILLISECOND, 0)
-                            val picked = c.timeInMillis
-                            // null разрешено; если выбрали дату — она должна быть в будущем
-                            if (picked <= System.currentTimeMillis()) {
-                                expiry = picked
-                                expiryErr = true
-                            } else {
-                                expiry = picked
-                                expiryErr = false
-                            }
-                        }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show()
-                    }) { Text("Срок годности") }
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        expiry?.let { df.format(Date(it)) } ?: "—",
-                        color = if (expiryErr) MaterialTheme.colorScheme.error else LocalContentColor.current,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.weight(1f)
+                    AssistChip(
+                        onClick = {
+                            expiry = null
+                            expiryErr = false
+                        },
+                        label = { Text("Без срока") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (expiry == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else MaterialTheme.colorScheme.surface,
+                            labelColor = if (expiry == null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
                     )
 
-                    // новая кнопка "Очистить" видна только если дата выбрана
-                    if (expiry != null) {
-                        Spacer(Modifier.width(8.dp))
-                        TextButton(
-                            onClick = { expiry = null; expiryErr = false }
-                        ) { Text("Очистить") }
-                    }
-                }
-                if (expiryErr) {
-                    Text(
-                        "Дата должна быть позже сегодняшнего дня",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
+                    AssistChip(
+                        onClick = {
+                            val now = Calendar.getInstance()
+                            DatePickerDialog(ctx, { _, y, m, d ->
+                                val c = Calendar.getInstance()
+                                c.set(y, m, d, 12, 0, 0)
+                                val picked = c.timeInMillis
+                                if (picked <= System.currentTimeMillis()) {
+                                    expiry = picked
+                                    expiryErr = true
+                                } else {
+                                    expiry = picked
+                                    expiryErr = false
+                                }
+                            }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show()
+                        },
+                        label = { Text(expiry?.let { df.format(Date(it)) } ?: "Выбрать дату") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = if (expiry != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else MaterialTheme.colorScheme.surface,
+                            labelColor = if (expiry != null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
                     )
                 }
+
             }
         },
         confirmButton = {
