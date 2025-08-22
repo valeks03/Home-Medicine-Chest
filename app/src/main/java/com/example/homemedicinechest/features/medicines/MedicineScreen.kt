@@ -31,8 +31,10 @@ import java.util.*
 @Composable
 fun MedicinesScreen(userId: Long,
                     onLogout: () -> Unit = {},
-                    showOwnTopBar: Boolean = true,
-                    showOwnFab: Boolean = true) {
+                    showOwnTopBar: Boolean = false,
+                    showOwnFab: Boolean = true,
+                    topBarActions: @Composable RowScope.() -> Unit = {}
+) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as App
     val repo = remember { MedicinesRepository(app.db.medicineDao()) }
     val presenter = remember { MedicinesPresenter(repo) }
