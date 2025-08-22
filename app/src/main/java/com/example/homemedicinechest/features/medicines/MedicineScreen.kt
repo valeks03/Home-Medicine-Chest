@@ -71,13 +71,12 @@ fun MedicinesScreen(userId: Long) {
             }
         }
     ) { innerPadding ->
-        // Добавим пустого места под FAB, чтобы он не перекрывал последнюю карточку
         val extraFabSpace = 104.dp
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp), // общий боковой отступ
+                .padding(horizontal = 12.dp),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 8.dp,
                 bottom = innerPadding.calculateBottomPadding() + extraFabSpace
@@ -133,11 +132,39 @@ private fun MedicineCard(
             .padding(vertical = 8.dp)
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp), // аккуратная тень
-        border = BorderStroke(1.dp, Purple40.copy(alpha = 0.30f))        // тонкая окантовка
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        border = BorderStroke(1.dp, Purple40.copy(alpha = 0.30f))
     ) {
         Column(Modifier.padding(12.dp)) {
-            Text(m.name, style = MaterialTheme.typography.titleMedium)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    m.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                m.form?.takeIf { it.isNotBlank() }?.let { formText ->
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Text(
+                            text = formText,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+
+
+
+
             Text("${m.dosage} · Остаток: ${m.stockQty}", style = MaterialTheme.typography.bodyMedium)
             Text(
                 m.expiresAt?.let { "Годен до: ${df.format(Date(it))}" } ?: "Без срока",
