@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
@@ -26,7 +29,10 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicinesScreen(userId: Long) {
+fun MedicinesScreen(userId: Long,
+                    onLogout: () -> Unit = {},
+                    showOwnTopBar: Boolean = true,
+                    showOwnFab: Boolean = true) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as App
     val repo = remember { MedicinesRepository(app.db.medicineDao()) }
     val presenter = remember { MedicinesPresenter(repo) }
@@ -34,6 +40,7 @@ fun MedicinesScreen(userId: Long) {
     var showEditor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Medicine?>(null) }
     val scope = rememberCoroutineScope()
+    var menuExpanded by remember { mutableStateOf(false) }
 
     val view = remember {
         object : MedicinesView {
@@ -51,23 +58,41 @@ fun MedicinesScreen(userId: Long) {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.home_medicine_chest)) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFF6650A4),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White,
-                    actionIconContentColor = Color.White
+            if (showOwnTopBar) {
+                CenterAlignedTopAppBar(
+                    title = { Text(stringResource(R.string.home_medicine_chest)) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color(0xFF6650A4),
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    ),
+                    actions = {
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Меню"
+                            )
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Выйти") },
+                                onClick = { menuExpanded = false; onLogout() }
+                            )
+                        }
+                    }
                 )
-            )
+            }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { editing = null; showEditor = true },
-                modifier = Modifier
-                    .padding(8.dp)
-            ) {
-                Text("+", fontSize = 20.sp)
+            if (showOwnFab) {
+                FloatingActionButton(
+                    onClick = { editing = null; showEditor = true },
+                    modifier = Modifier
+                        .padding(8.dp)
+                ) {
+                    Text("+", fontSize = 20.sp)
+                }
             }
         }
     ) { innerPadding ->

@@ -12,10 +12,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.homemedicinechest.App
 import com.example.homemedicinechest.data.repo.UserRepository
 import com.example.homemedicinechest.features.medicines.MedicinesScreen
 import kotlinx.coroutines.launch
+import com.example.homemedicinechest.features.home.HomeShell
+import com.example.homemedicinechest.data.prefs.UserSession
 
 class MainActivity : ComponentActivity(), AuthView {
 
@@ -24,18 +27,32 @@ class MainActivity : ComponentActivity(), AuthView {
     private var setLoading: ((Boolean) -> Unit)? = null
     private var setMessage: ((String?) -> Unit)? = null
     private var onLoginSuccessCallback: ((Long) -> Unit)? = null
+    private lateinit var session: UserSession
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         presenter = AuthPresenter(UserRepository((application as App).db.userDao()))
         presenter.attach(this)
-
+        session = UserSession(this)
         setContent {
             MaterialTheme {
                 val nav = rememberNavController()
+                val currentUserId by session.userId.collectAsState(initial = null)
+                val startDest = if (currentUserId == null) "auth" else "home/${currentUserId}"
 
-                NavHost(navController = nav, startDestination = "auth") {
+                LaunchedEffect(currentUserId) {
+                    val uid = currentUserId
+                    if (uid != null) {
+                        nav.navigate("home/$uid") {
+                            popUpTo("auth") { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
+
+                NavHost(navController = nav, startDestination = startDest) {
                     composable("auth") {
                         var loading by remember { mutableStateOf(false) }
                         var message by remember { mutableStateOf<String?>(null) }
@@ -55,8 +72,24 @@ class MainActivity : ComponentActivity(), AuthView {
                             }
                         )
                     }
-
-
+                    composable(
+                        "home/{userId}",
+                        arguments = listOf(navArgument("userId"){ type = NavType.LongType })
+                    ) { backStackEntry ->
+                        val uid = backStackEntry.arguments?.getLong("userId") ?: 0L
+                        HomeShell(
+                            userId = uid,
+                            onLogout = {
+                                lifecycleScope.launch {
+                                    session.clear()
+                                    nav.navigate("auth") {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+                        )
+                    }
                     composable(
                         route = "medicines/{userId}",
                         arguments = listOf(androidx.navigation.navArgument("userId"){ type = NavType.LongType })
@@ -72,7 +105,9 @@ class MainActivity : ComponentActivity(), AuthView {
     // ----- AuthView -----
     override fun showLoading(show: Boolean) { setLoading?.invoke(show) }
     override fun showMessage(msg: String) { setMessage?.invoke(msg) }
-    override fun onLoginSuccess(userId: Long) { onLoginSuccessCallback?.invoke(userId) }
+    override fun onLoginSuccess(userId: Long) {
+        lifecycleScope.launch { session.saveUserId(userId) }
+    }
 
     override fun onDestroy() {
         super.onDestroy()
