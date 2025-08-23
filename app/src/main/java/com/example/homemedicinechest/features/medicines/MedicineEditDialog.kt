@@ -1,10 +1,11 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.homemedicinechest.features.medicines
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,7 +13,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.homemedicinechest.R
 import com.example.homemedicinechest.data.db.Medicine
@@ -34,8 +34,10 @@ fun MedicineEditDialog(
     var instructions by remember { mutableStateOf(initial?.instructions ?: "") }
     var stock by remember { mutableStateOf((initial?.stockQty ?: 0).toString()) }
     var expiry by remember { mutableStateOf(initial?.expiresAt) }
+
+    var showMonthPicker by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
-    val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+    val monthYearDf = remember { SimpleDateFormat("MM.yyyy", Locale.getDefault()) }
 
     // флаги ошибок
     var nameErr by remember { mutableStateOf(false) }
@@ -128,61 +130,69 @@ fun MedicineEditDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Срок годности + подсветка
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AssistChip(
-                        onClick = {
-                            expiry = null
-                            expiryErr = false
-                        },
-                        label = { Text("Без срока") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (expiry == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            else MaterialTheme.colorScheme.surface,
-                            labelColor = if (expiry == null) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
-                        )
-                    )
+                // ==== Срок годности: чипы + Month/Year picker + пресеты ====
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                    AssistChip(
-                        onClick = {
-                            val now = Calendar.getInstance()
-                            DatePickerDialog(ctx, { _, y, m, d ->
-                                val c = Calendar.getInstance()
-                                c.set(y, m, d, 12, 0, 0)
-                                val picked = c.timeInMillis
-                                if (picked <= System.currentTimeMillis()) {
-                                    expiry = picked
-                                    expiryErr = true
-                                } else {
-                                    expiry = picked
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AssistChip(
+                            onClick = { expiry = null; expiryErr = false },
+                            label = { Text("Без срока") },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (expiry == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                else MaterialTheme.colorScheme.surface,
+                                labelColor = if (expiry == null) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+
+                        AssistChip(
+                            onClick = { showMonthPicker = true },
+                            label = { Text(expiry?.let { monthYearDf.format(Date(it)) } ?: "Месяц / Год") },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = if (expiry != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                else MaterialTheme.colorScheme.surface,
+                                labelColor = if (expiry != null) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+
+                    // Быстрые пресеты: +1 / +2 / +3 / +5 лет
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1, 2, 3, 5).forEach { years ->
+                            AssistChip(
+                                onClick = {
+                                    expiry = plusYearsToEndOfMonth(years)
                                     expiryErr = false
-                                }
-                            }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show()
-                        },
-                        label = { Text(expiry?.let { df.format(Date(it)) } ?: "Выбрать дату") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = if (expiry != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                            else MaterialTheme.colorScheme.surface,
-                            labelColor = if (expiry != null) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                }
+                                },
+                                label = { Text("+$years г.") }
+                            )
+                        }
+                    }
 
+                    if (expiryErr) {
+                        Text(
+                            "Дата должна быть позже сегодняшнего дня",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                // ==== конец блока срока годности ====
             }
         },
         confirmButton = {
             TextButton(onClick = {
+                // простая обязательность полей
                 nameErr = name.isBlank()
                 dosageErr = dosage.isBlank()
                 formErr = form.isBlank()
                 stockErr = stock.isBlank()
 
-                // проверка даты
+                // проверка даты: null допустимо; если есть — должна быть в будущем
                 expiryErr = expiry?.let { it <= System.currentTimeMillis() } ?: false
 
                 val ok = !(nameErr || dosageErr || formErr || stockErr || expiryErr)
@@ -197,7 +207,7 @@ fun MedicineEditDialog(
                         dosage = dosage.trim(),
                         form = form.trim(),
                         instructions = instructions.ifBlank { null },
-                        expiresAt = expiry, // null = «без срока годности»
+                        expiresAt = expiry, // null = «без срока»
                         stockQty = stock.toIntOrNull() ?: 0
                     )
                 )
@@ -205,4 +215,27 @@ fun MedicineEditDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
+
+    // Диалог выбора Месяц/Год
+    if (showMonthPicker) {
+        MonthYearPickerDialog(
+            initialMillis = expiry,
+            onDismiss = { showMonthPicker = false },
+            onConfirm = { selected ->
+                val today = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                if (selected <= today) {
+                    expiryErr = true
+                } else {
+                    expiry = selected
+                    expiryErr = false
+                    showMonthPicker = false
+                }
+            }
+        )
+    }
 }
