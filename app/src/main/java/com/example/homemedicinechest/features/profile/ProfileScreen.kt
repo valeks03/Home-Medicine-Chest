@@ -2,12 +2,16 @@ package com.example.homemedicinechest.features.profile
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.homemedicinechest.App
 import com.example.homemedicinechest.data.db.Profile
@@ -34,6 +38,8 @@ fun ProfileScreen(userId: Long) {
 
     var showBirthdayPicker by remember { mutableStateOf(false) }
 
+    var heightText by remember { mutableStateOf(profile.heightCm?.toString().orEmpty()) }
+    var weightText by remember { mutableStateOf(profile.weightKg?.toString().orEmpty()) }
 
 
     val view = remember {
@@ -57,10 +63,13 @@ fun ProfileScreen(userId: Long) {
     var name by remember { mutableStateOf(profile.name.orEmpty()) }
     var birthday by remember { mutableStateOf(profile.birthdayMillis) }
 
-    LaunchedEffect(profile.userId, profile.name, profile.birthdayMillis) {
+    LaunchedEffect(profile.userId, profile.name, profile.birthdayMillis, profile.heightCm, profile.weightKg) {
         name = profile.name.orEmpty()
         birthday = profile.birthdayMillis
+        heightText = profile.heightCm?.toString().orEmpty()
+        weightText = profile.weightKg?.toString().orEmpty()
     }
+
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) }
@@ -68,7 +77,8 @@ fun ProfileScreen(userId: Long) {
         Column(
             modifier = Modifier
                 .padding(inner)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text("Профиль", style = MaterialTheme.typography.titleLarge)
@@ -89,8 +99,60 @@ fun ProfileScreen(userId: Long) {
                 )
             }
 
+            Spacer(Modifier.height(6.dp))
 
-            Spacer(Modifier.height(8.dp))
+            Text("Вес и рост", style = MaterialTheme.typography.titleMedium)
+
+            OutlinedTextField(
+                value = heightText,
+                onValueChange = { heightText = it.filter { ch -> ch.isDigit() } }, // только цифры
+                label = { Text("Рост (см)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = weightText,
+                onValueChange = { txt ->
+                    // разрешим один разделитель . или , -> приведём к '.'
+                    val normalized = txt.replace(',', '.')
+                    // оставим цифры и максимум одну точку
+                    val cleaned = buildString {
+                        var dot = false
+                        for (c in normalized) {
+                            if (c.isDigit()) append(c)
+                            else if ((c == '.' || c == ',') && !dot) { append('.'); dot = true }
+                        }
+                    }
+                    weightText = cleaned
+                },
+                label = { Text("Вес (кг)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+
+            val bmi = remember(heightText, weightText) {
+                val h = heightText.toFloatOrNull()?.div(100f)
+                val w = weightText.toFloatOrNull()
+                if (h != null && w != null && h > 0f) (w / (h * h)) else null
+            }
+            bmi?.let {
+                Row (modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End) {
+                    Text(
+                        text = String.format(Locale.getDefault(), "BMI: %.1f ", it),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+
+            Spacer(Modifier.height(6.dp))
 
             Text("Смена пароля", style = MaterialTheme.typography.titleMedium)
 
@@ -105,7 +167,8 @@ fun ProfileScreen(userId: Long) {
             OutlinedTextField(
                 value = newPass, onValueChange = { newPass = it; passError = null },
                 label = { Text("Новый пароль") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Next
                 )
@@ -113,11 +176,14 @@ fun ProfileScreen(userId: Long) {
             OutlinedTextField(
                 value = newPass2, onValueChange = { newPass2 = it; passError = null },
                 label = { Text("Повтор нового пароля") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions.Default.copy(
                     imeAction = ImeAction.Done
                 )
             )
+
+
 
             passError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
@@ -146,9 +212,14 @@ fun ProfileScreen(userId: Long) {
 
             Button(
                 onClick = {
+                    val height = heightText.toIntOrNull()?.takeIf { it in 30..300 } // разумные пределы
+                    val weight = weightText.toFloatOrNull()?.takeIf { it in 2f..500f }
+
                     val updated = profile.copy(
                         name = name.ifBlank { null },
-                        birthdayMillis = birthday
+                        birthdayMillis = birthday,
+                        heightCm = height,
+                        weightKg = weight
                     )
                     scope.launch { presenter.save(updated) }
                 }
@@ -160,6 +231,8 @@ fun ProfileScreen(userId: Long) {
             message?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary)
             }
+
+            Spacer(modifier = Modifier.height(80.dp))
         }
         if (showBirthdayPicker) {
             BirthdayPickerDialog(

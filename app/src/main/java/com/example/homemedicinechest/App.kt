@@ -7,6 +7,7 @@ import androidx.room.Room
 import com.example.homemedicinechest.data.db.AppDb
 import com.example.homemedicinechest.data.db.MIGRATION_1_2
 import com.example.homemedicinechest.data.db.MIGRATION_2_3
+import com.example.homemedicinechest.data.db.MIGRATION_3_4
 
 class App : Application() {
     lateinit var db: AppDb
@@ -16,7 +17,7 @@ class App : Application() {
 
         db = Room.databaseBuilder(this, AppDb::class.java, "homemed.db")
             .fallbackToDestructiveMigration()
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
         val channel = NotificationChannel(

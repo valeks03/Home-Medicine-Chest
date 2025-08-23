@@ -101,5 +101,7 @@ data class IntakeEvent(
 data class Profile(
     @PrimaryKey val userId: Long,
     val name: String? = null,
-    val birthdayMillis: Long? = null
+    val birthdayMillis: Long? = null,
+    val heightCm: Int? = null,
+    val weightKg: Float? = null
 )
