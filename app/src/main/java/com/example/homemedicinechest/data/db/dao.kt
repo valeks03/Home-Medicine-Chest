@@ -26,7 +26,7 @@ interface MedicineDao {
     @Update suspend fun update(m: Medicine)
     @Delete suspend fun delete(m: Medicine)
 
-    @Query("SELECT * FROM Medicine WHERE userId=:userId ORDER BY name")
+    @Query("SELECT * FROM Medicine WHERE userId=:userId ORDER BY nameNorm ASC, name ASC")
     fun observeAll(userId: Long): Flow<List<Medicine>>
 
     @Query("SELECT * FROM Medicine WHERE id=:id")

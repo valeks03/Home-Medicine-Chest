@@ -44,6 +44,7 @@ data class Medicine(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val userId: Long,
     val name: String,
+    val nameNorm: String,
     val dosage: String,
     val form: String? = null,
     val instructions: String? = null,

@@ -3,9 +3,9 @@ package com.example.homemedicinechest
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.os.Build
 import androidx.room.Room
 import com.example.homemedicinechest.data.db.AppDb
+import com.example.homemedicinechest.data.db.MIGRATION_1_2
 
 class App : Application() {
     lateinit var db: AppDb
@@ -13,11 +13,10 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        db = Room.databaseBuilder(
-            applicationContext,
-            AppDb::class.java,
-            "homemed.db"
-        ).build()
+        db = Room.databaseBuilder(this, AppDb::class.java, "homemed.db")
+            .fallbackToDestructiveMigration()
+            .addMigrations(MIGRATION_1_2)   // ← важно
+            .build()
 
         val channel = NotificationChannel(
             "reminders",

@@ -193,6 +193,7 @@ fun MedicineEditDialog(
                         id = initial?.id ?: 0L,
                         userId = userId,
                         name = name.trim(),
+                        nameNorm = name.trim().lowercase(Locale.getDefault()),
                         dosage = dosage.trim(),
                         form = form.trim(),
                         instructions = instructions.ifBlank { null },
