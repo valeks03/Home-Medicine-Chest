@@ -24,6 +24,20 @@ class UserRepository(private val dao: UserDao) {
         return true
     }
 
+    suspend fun changePassword(userId: Long, oldPassword: String, newPassword: String): Result<Unit> {
+        val u = dao.getById(userId) ?: return Result.failure(IllegalStateException("Пользователь не найден"))
+        if (!verifyPassword(u, oldPassword)) {
+            return Result.failure(IllegalArgumentException("Старый пароль неверен"))
+        }
+//        if (newPassword.length < 6) {
+//            return Result.failure(IllegalArgumentException("Новый пароль слишком короткий"))
+//        }
+        val newHash = hash(newPassword)
+        dao.updatePasswordHash(userId, newHash)
+        return Result.success(Unit)
+    }
+
+
     private fun hash(s: String): String {
         val md = MessageDigest.getInstance("SHA-256")
         return md.digest(s.toByteArray()).joinToString("") { "%02x".format(it) }

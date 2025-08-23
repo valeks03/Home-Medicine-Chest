@@ -12,7 +12,8 @@ interface UserDao {
     suspend fun getById(id: Long): User?
     @Update suspend fun update(user: User)
 
-
+    @Query("UPDATE `User` SET passwordHash = :newPassword WHERE id = :id")
+    suspend fun updatePasswordHash(id: Long, newPassword: String): Int
 }
 
 @Dao

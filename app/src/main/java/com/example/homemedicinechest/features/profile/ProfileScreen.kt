@@ -2,10 +2,12 @@ package com.example.homemedicinechest.features.profile
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.homemedicinechest.App
 import com.example.homemedicinechest.data.db.Profile
@@ -23,6 +25,16 @@ fun ProfileScreen(userId: Long) {
     var profile by remember { mutableStateOf(Profile(userId)) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+
+    var oldPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    var newPass2 by remember { mutableStateOf("") }
+    var passError by remember { mutableStateOf<String?>(null) }
+    val userRepo = remember { com.example.homemedicinechest.data.repo.UserRepository(app.db.userDao()) }
+
+    var showBirthdayPicker by remember { mutableStateOf(false) }
+
+
 
     val view = remember {
         object : ProfileView {
@@ -45,7 +57,6 @@ fun ProfileScreen(userId: Long) {
     var name by remember { mutableStateOf(profile.name.orEmpty()) }
     var birthday by remember { mutableStateOf(profile.birthdayMillis) }
 
-    // Синхронизация локального UI, когда прилетает новый profile
     LaunchedEffect(profile.userId, profile.name, profile.birthdayMillis) {
         name = profile.name.orEmpty()
         birthday = profile.birthdayMillis
@@ -69,9 +80,6 @@ fun ProfileScreen(userId: Long) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
-
-            // E-mail можем показать из User, если надо (read-only). Если у тебя есть UserRepo — подтащим позже.
-
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
                     val now = Calendar.getInstance()
@@ -89,6 +97,58 @@ fun ProfileScreen(userId: Long) {
             }
 
             Spacer(Modifier.height(8.dp))
+
+            Text("Смена пароля", style = MaterialTheme.typography.titleMedium)
+
+            OutlinedTextField(
+                value = oldPass, onValueChange = { oldPass = it; passError = null },
+                label = { Text("Старый пароль") },
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                )
+            )
+            OutlinedTextField(
+                value = newPass, onValueChange = { newPass = it; passError = null },
+                label = { Text("Новый пароль") },
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Next
+                )
+            )
+            OutlinedTextField(
+                value = newPass2, onValueChange = { newPass2 = it; passError = null },
+                label = { Text("Повтор нового пароля") },
+                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions.Default.copy(
+                    imeAction = ImeAction.Done
+                )
+            )
+
+            passError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = {
+                    if (newPass != newPass2) {
+                        passError = "Пароли не совпадают"
+                        return@Button
+                    }
+                    scope.launch {
+                        loading = true
+                        val res = userRepo.changePassword(userId, oldPass, newPass)
+                        loading = false
+                        res.onSuccess {
+                            oldPass = ""; newPass = ""; newPass2 = ""
+                            message = "Пароль изменён"
+                        }.onFailure {
+                            passError = it.message ?: "Не удалось изменить пароль"
+                        }
+                    }
+                }) { Text("Изменить пароль") }
+            }
+
+
+
 
             Button(
                 onClick = {
