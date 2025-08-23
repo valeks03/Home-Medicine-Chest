@@ -81,20 +81,14 @@ fun ProfileScreen(userId: Long) {
                 modifier = Modifier.fillMaxWidth()
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = {
-                    val now = Calendar.getInstance()
-                    DatePickerDialog(ctx, { _, y, m, d ->
-                        val c = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }
-                        birthday = c.timeInMillis
-                    }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).show()
-                }) { Text("Дата рождения") }
-
+                Button(onClick = { showBirthdayPicker = true }) { Text("Дата рождения") }
                 Text(
                     text = birthday?.let { df.format(Date(it)) } ?: "—",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(top = 12.dp)
                 )
             }
+
 
             Spacer(Modifier.height(8.dp))
 
@@ -166,6 +160,16 @@ fun ProfileScreen(userId: Long) {
             message?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary)
             }
+        }
+        if (showBirthdayPicker) {
+            BirthdayPickerDialog(
+                initialMillis = birthday,
+                onDismiss = { showBirthdayPicker = false },
+                onConfirm = { selected ->
+                    birthday = selected
+                    showBirthdayPicker = false
+                }
+            )
         }
     }
 }
