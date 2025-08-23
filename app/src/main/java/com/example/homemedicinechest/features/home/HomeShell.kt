@@ -1,12 +1,15 @@
 package com.example.homemedicinechest.features.home
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -19,6 +22,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.example.homemedicinechest.features.medicines.MedicinesScreen
@@ -43,6 +47,10 @@ fun HomeShell(
 
     var currentTitle by remember { mutableStateOf(DrawerItem.Medicines.title) }
 
+    var searchMode by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+
     val items = listOf(
         DrawerItem.Profile,
         DrawerItem.Medicines,
@@ -66,10 +74,17 @@ fun HomeShell(
                         selected = false, // можно подсвечивать по currentRoute, если нужно
                         onClick = {
                             scope.launch { drawerState.close() }
+
                             if (item is DrawerItem.Logout) {
                                 onLogout()
                             } else {
                                 currentTitle = item.title
+
+                                if (item !is DrawerItem.Medicines) {
+                                    searchMode = false
+                                    searchQuery = ""
+                                }
+
                                 nav.navigate(item.route) {
                                     popUpTo(DrawerItem.Medicines.route)
                                     launchSingleTop = true
@@ -85,7 +100,28 @@ fun HomeShell(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text(currentTitle) },
+                    title = {
+                        if (searchMode) {
+                            TextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                singleLine = true,
+                                placeholder = { Text("Поиск лекарств", color = Color.White) },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = TextStyle(color = Color.White),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    cursorColor = Color.White
+                                )
+                            )
+                        } else {
+                            Text(currentTitle)
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(
@@ -93,6 +129,20 @@ fun HomeShell(
                                 contentDescription = "Меню",
                                 tint = Color.White
                             )
+                        }
+                    },
+                    actions = {
+                        if (searchMode) {
+                            IconButton(onClick = { searchQuery = ""; searchMode = false }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Закрыть поиск", tint = Color.White)
+                            }
+                        } else {
+                            // показываем лупу только на экране медикаментов
+                            if (currentTitle == DrawerItem.Medicines.title) {
+                                IconButton(onClick = { searchMode = true }) {
+                                    Icon(Icons.Filled.Search, contentDescription = "Поиск", tint = Color.White)
+                                }
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -108,7 +158,8 @@ fun HomeShell(
                 nav = nav,
                 userId = userId,
                 modifier = Modifier.padding(innerPadding),
-                onLogout = onLogout
+                onLogout = onLogout,
+                searchQuery = searchQuery
             )
         }
     }
@@ -119,7 +170,8 @@ private fun HomeNavHost(
     nav: NavHostController,
     userId: Long,
     modifier: Modifier,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    searchQuery: String
 ) {
     NavHost(
         navController = nav,
@@ -134,8 +186,9 @@ private fun HomeNavHost(
             MedicinesScreen(
                 userId = userId,
                 onLogout = onLogout,
-                showOwnTopBar = false,   // шапка уже в HomeShell
-                showOwnFab = true        // FAB оставляем у самого экрана
+                showOwnTopBar = false,
+                showOwnFab = true,
+                searchQuery = searchQuery
             )
         }
         composable(DrawerItem.Stats.route) {

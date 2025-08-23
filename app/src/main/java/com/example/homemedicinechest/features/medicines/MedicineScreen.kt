@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homemedicinechest.App
@@ -33,7 +34,8 @@ fun MedicinesScreen(userId: Long,
                     onLogout: () -> Unit = {},
                     showOwnTopBar: Boolean = false,
                     showOwnFab: Boolean = true,
-                    topBarActions: @Composable RowScope.() -> Unit = {}
+                    topBarActions: @Composable RowScope.() -> Unit = {},
+                    searchQuery: String = ""
 ) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as App
     val repo = remember { MedicinesRepository(app.db.medicineDao()) }
@@ -43,6 +45,8 @@ fun MedicinesScreen(userId: Long,
     var editing by remember { mutableStateOf<Medicine?>(null) }
     val scope = rememberCoroutineScope()
     var menuExpanded by remember { mutableStateOf(false) }
+
+
 
     val view = remember {
         object : MedicinesView {
@@ -100,6 +104,18 @@ fun MedicinesScreen(userId: Long,
     ) { innerPadding ->
         val extraFabSpace = 104.dp
 
+        val filtered = remember(list, searchQuery) {
+            val q = searchQuery.trim().lowercase()
+            if (q.isEmpty()) list
+            else list.filter { m ->
+                val name = m.name.lowercase()
+                val dosage = m.dosage.lowercase()
+                val form = m.form?.lowercase() ?: ""
+                name.contains(q) || dosage.contains(q) || form.contains(q)
+            }
+        }
+
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -110,16 +126,17 @@ fun MedicinesScreen(userId: Long,
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (list.isEmpty()) {
+            if (filtered.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillParentMaxSize(),
+                        modifier = Modifier.fillParentMaxSize(),
                         contentAlignment = Alignment.Center
-                    ) { Text("Добавьте первое лекарство") }
+                    ) {
+                        Text(if (searchQuery.isEmpty()) "Добавьте первое лекарство" else "Ничего не найдено")
+                    }
                 }
             } else {
-                items(list) { m ->
+                items(filtered) { m ->
                     MedicineCard(
                         m,
                         onClick = { editing = m; showEditor = true },
