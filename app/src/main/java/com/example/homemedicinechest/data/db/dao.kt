@@ -11,6 +11,8 @@ interface UserDao {
     @Query("SELECT * FROM User WHERE id=:id")
     suspend fun getById(id: Long): User?
     @Update suspend fun update(user: User)
+
+
 }
 
 @Dao
@@ -56,4 +58,21 @@ interface IntakeDao {
 
     @Query("SELECT COUNT(*) FROM IntakeEvent WHERE status='taken' AND scheduledAt BETWEEN :from AND :to")
     suspend fun countTaken(from: Long, to: Long): Int
+}
+
+
+@Dao
+interface ProfileDao {
+
+    @Query("SELECT * FROM Profile WHERE userId = :userId LIMIT 1")
+    fun observe(userId: Long): Flow<Profile?>
+
+    @Query("SELECT * FROM Profile WHERE userId = :userId LIMIT 1")
+    suspend fun get(userId: Long): Profile?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(profile: Profile)
+
+    @Update
+    suspend fun update(profile: Profile)
 }

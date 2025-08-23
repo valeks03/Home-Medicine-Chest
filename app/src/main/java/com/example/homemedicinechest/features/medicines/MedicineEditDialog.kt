@@ -130,7 +130,6 @@ fun MedicineEditDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // ==== Срок годности: чипы + Month/Year picker + пресеты ====
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
                     Row(
@@ -168,7 +167,7 @@ fun MedicineEditDialog(
                                     expiry = plusYearsToEndOfMonth(years)
                                     expiryErr = false
                                 },
-                                label = { Text("+$years г.") }
+                                label = { Text("$years г.") }
                             )
                         }
                     }

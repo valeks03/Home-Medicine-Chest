@@ -22,6 +22,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.example.homemedicinechest.features.medicines.MedicinesScreen
+import com.example.homemedicinechest.features.profile.ProfileScreen
 
 sealed class DrawerItem(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     data object Medicines : DrawerItem("drawer/medicines", "Медикаменты", Icons.Filled.Medication)
@@ -127,7 +128,7 @@ private fun HomeNavHost(
     ) {
 
         composable(DrawerItem.Profile.route) {
-            ProfilePlaceholder()
+            ProfileScreen(userId = userId)
         }
         composable(DrawerItem.Medicines.route) {
             MedicinesScreen(
@@ -150,9 +151,9 @@ private fun StatsPlaceholder() {
     }
 }
 
-@Composable
-private fun ProfilePlaceholder() {
-    Surface(tonalElevation = 1.dp, modifier = Modifier.padding(16.dp)) {
-        Text("Профиль — редактирование данных пользователя", modifier = Modifier.padding(16.dp))
-    }
-}
+//@Composable
+//private fun ProfilePlaceholder() {
+//    Surface(tonalElevation = 1.dp, modifier = Modifier.padding(16.dp)) {
+//        Text("Профиль — редактирование данных пользователя", modifier = Modifier.padding(16.dp))
+//    }
+//}

@@ -11,9 +11,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         FamilyMember::class,
         Medicine::class,
         DosePlan::class,
-        IntakeEvent::class
+        IntakeEvent::class,
+        Profile::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDb : RoomDatabase() {
@@ -22,15 +23,25 @@ abstract class AppDb : RoomDatabase() {
     abstract fun medicineDao(): MedicineDao
     abstract fun dosePlanDao(): DosePlanDao
     abstract fun intakeDao(): IntakeDao
+    abstract fun profileDao(): ProfileDao
 }
 
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        // 1) Добавляем колонку
         db.execSQL("ALTER TABLE Medicine ADD COLUMN nameNorm TEXT")
 
-        // 2) Первично заполняем на основе name (ASCII-вариант)
         db.execSQL("UPDATE Medicine SET nameNorm = lower(name)")
+    }
+}
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `Profile`(
+                `userId` INTEGER NOT NULL PRIMARY KEY,
+                `name` TEXT,
+                `birthdayMillis` INTEGER
+            )
+        """.trimIndent())
     }
 }

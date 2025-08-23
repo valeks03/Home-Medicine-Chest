@@ -95,3 +95,11 @@ data class IntakeEvent(
     val takenAt: Long? = null,
     val status: String = "scheduled" // scheduled, taken, skipped
 )
+
+
+@Entity
+data class Profile(
+    @PrimaryKey val userId: Long,
+    val name: String? = null,
+    val birthdayMillis: Long? = null
+)
