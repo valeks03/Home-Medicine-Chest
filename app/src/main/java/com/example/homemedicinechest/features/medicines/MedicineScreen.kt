@@ -1,6 +1,7 @@
 package com.example.homemedicinechest.features.medicines
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,6 +26,7 @@ import com.example.homemedicinechest.data.db.Medicine
 import com.example.homemedicinechest.data.repo.MedicinesRepository
 import com.example.homemedicinechest.ui.theme.* // Purple40, Lavender, etc.
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.combinedClickable
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -140,7 +142,8 @@ fun MedicinesScreen(userId: Long,
                     MedicineCard(
                         m,
                         onClick = { editing = m; showEditor = true },
-                        onDelete = { scope.launch { presenter.delete(m) } }
+                        onDelete = { scope.launch { presenter.delete(m) } },
+                        onForceExpire = { forced -> scope.launch { presenter.addOrUpdate(forced) } }
                     )
                 }
             }
@@ -162,22 +165,45 @@ fun MedicinesScreen(userId: Long,
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MedicineCard(
     m: Medicine,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onForceExpire: (Medicine) -> Unit = {}
 ) {
     val df = remember { SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()) }
+    val expired = m.expiresAt?.let { it < System.currentTimeMillis() } == true
+
+    val containerColor =
+        if (expired) MaterialTheme.colorScheme.errorContainer
+        else MaterialTheme.colorScheme.surface
+    val contentColor =
+        if (expired) MaterialTheme.colorScheme.onErrorContainer
+        else MaterialTheme.colorScheme.onSurface
+    val borderColor =
+        if (expired) MaterialTheme.colorScheme.error
+        else Purple40.copy(alpha = 0.30f)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    val yesterday = System.currentTimeMillis() - 24 * 60 * 60 * 1000
+                    onForceExpire(m.copy(expiresAt = yesterday))
+                }
+            ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        border = BorderStroke(1.dp, Purple40.copy(alpha = 0.30f))
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(Modifier.padding(12.dp)) {
             Row(
@@ -185,15 +211,12 @@ private fun MedicineCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    m.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text(m.name, style = MaterialTheme.typography.titleMedium)
 
                 m.form?.takeIf { it.isNotBlank() }?.let { formText ->
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = if (expired) 0.25f else 0.15f),
                         tonalElevation = 0.dp
                     ) {
                         Text(
@@ -205,15 +228,15 @@ private fun MedicineCard(
                 }
             }
 
-
-
-
-
             Text("${m.dosage} · Остаток: ${m.stockQty}", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                m.expiresAt?.let { "Годен до: ${df.format(Date(it))}" } ?: "Без срока",
-                style = MaterialTheme.typography.bodySmall
-            )
+
+            val expiryText = when {
+                m.expiresAt == null -> "Без срока"
+                expired -> "Просрочено: ${df.format(Date(m.expiresAt!!))}"
+                else -> "Годен до: ${df.format(Date(m.expiresAt!!))}"
+            }
+            Text(expiryText, style = MaterialTheme.typography.bodySmall)
+
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = onDelete) { Text("Удалить") }
             }
