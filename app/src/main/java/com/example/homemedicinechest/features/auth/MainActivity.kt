@@ -1,12 +1,18 @@
 package com.example.homemedicinechest.features.auth
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,6 +43,7 @@ class MainActivity : ComponentActivity(), AuthView {
         session = UserSession(this)
         setContent {
             MaterialTheme {
+                NotificationsPermissionRequester()
                 val nav = rememberNavController()
                 val currentUserId by session.userId.collectAsState(initial = null)
                 val startDest = if (currentUserId == null) "auth" else "home/${currentUserId}"
@@ -122,5 +129,25 @@ private fun MedicinesPlaceholder() {
             "Экран лекарств (скоро подключим)",
             modifier = androidx.compose.ui.Modifier.padding(p).padding(16.dp)
         )
+    }
+}
+
+@Composable
+fun NotificationsPermissionRequester() {
+    if (Build.VERSION.SDK_INT < 33) return
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {}
+    )
+
+    LaunchedEffect(Unit) {
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

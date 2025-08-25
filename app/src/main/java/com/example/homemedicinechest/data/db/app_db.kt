@@ -12,9 +12,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Medicine::class,
         DosePlan::class,
         IntakeEvent::class,
-        Profile::class
+        Profile::class,
+        MedicationSchedule::class,
+        IntakeLog::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class AppDb : RoomDatabase() {
@@ -24,6 +26,8 @@ abstract class AppDb : RoomDatabase() {
     abstract fun dosePlanDao(): DosePlanDao
     abstract fun intakeDao(): IntakeDao
     abstract fun profileDao(): ProfileDao
+    abstract fun scheduleDao(): ScheduleDao
+    abstract fun intakeLogDao(): IntakeLogDao
 }
 
 
@@ -50,6 +54,33 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE `Profile` ADD COLUMN `heightCm` INTEGER")
         db.execSQL("ALTER TABLE `Profile` ADD COLUMN `weightKg` REAL")
+    }
+}
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `MedicationSchedule`(
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `userId` INTEGER NOT NULL,
+                `medicineId` INTEGER NOT NULL,
+                `hour` INTEGER NOT NULL,
+                `minute` INTEGER NOT NULL,
+                `daysMask` INTEGER NOT NULL,
+                `dose` TEXT,
+                `enabled` INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `IntakeLog`(
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `userId` INTEGER NOT NULL,
+                `medicineId` INTEGER NOT NULL,
+                `plannedAt` INTEGER NOT NULL,
+                `takenAt` INTEGER,
+                `status` TEXT NOT NULL
+            )
+        """.trimIndent())
     }
 }
 

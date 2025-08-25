@@ -105,3 +105,26 @@ data class Profile(
     val heightCm: Int? = null,
     val weightKg: Float? = null
 )
+
+@Entity
+data class MedicationSchedule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Long,
+    val medicineId: Long,
+    val hour: Int,                 // 0..23
+    val minute: Int,               // 0..59
+    val daysMask: Int = 0,         // 0 = каждый день
+    val dose: String? = null,
+    val enabled: Boolean = true
+)
+
+
+@Entity
+data class IntakeLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val userId: Long,
+    val medicineId: Long,
+    val plannedAt: Long,     // когда планировался приём (UTC millis)
+    val takenAt: Long? = null,
+    val status: String       // "TAKEN" | "SKIPPED" | "MISSED"
+)

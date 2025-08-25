@@ -77,3 +77,41 @@ interface ProfileDao {
     @Update
     suspend fun update(profile: Profile)
 }
+
+@Dao
+interface ScheduleDao {
+    @Query("SELECT * FROM MedicationSchedule WHERE userId=:userId AND enabled=1")
+    fun observeAll(userId: Long): Flow<List<MedicationSchedule>>
+
+    @Query("SELECT * FROM MedicationSchedule WHERE medicineId=:medicineId")
+    fun observeForMedicine(medicineId: Long): Flow<List<MedicationSchedule>>
+
+    @Insert
+    suspend fun insert(s: MedicationSchedule): Long
+
+    @Update
+    suspend fun update(s: MedicationSchedule)
+
+    @Delete
+    suspend fun delete(s: MedicationSchedule)
+
+    @Query("SELECT * FROM MedicationSchedule WHERE id=:id LIMIT 1")
+    suspend fun getById(id: Long): MedicationSchedule?
+}
+
+@Dao
+interface IntakeLogDao {
+    @Insert
+    suspend fun insert(log: IntakeLog): Long
+
+    @Query("""
+        SELECT * FROM IntakeLog
+        WHERE userId=:userId
+        ORDER BY plannedAt DESC
+        LIMIT :limit
+    """)
+    fun observeRecent(userId: Long, limit: Int = 200): Flow<List<IntakeLog>>
+
+    @Query("DELETE FROM IntakeLog WHERE userId=:userId")
+    suspend fun clearForUser(userId: Long)
+}
