@@ -1,7 +1,9 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.homemedicinechest.features.medicines
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.material3.AssistChip
@@ -16,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.homemedicinechest.R
 import com.example.homemedicinechest.data.db.Medicine
+import com.example.homemedicinechest.ui.theme.Purple40
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -46,176 +49,194 @@ fun MedicineEditDialog(
     var stockErr by remember { mutableStateOf(false) }
     var expiryErr by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Новое лекарство" else "Редактирование") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it; if (nameErr && it.isNotBlank()) nameErr = false },
-                    label = { Text("Название") },
-                    isError = nameErr,
-                    supportingText = { if (nameErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp,
+            border = BorderStroke(1.dp, Purple40.copy(alpha = 0.3f)),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(Modifier.padding(16.dp)) {
+
+                Text(
+                    text = if (initial == null) "Новое лекарство" else "Редактирование",
+                    style = MaterialTheme.typography.titleLarge
                 )
+                Spacer(Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = dosage,
-                    onValueChange = { dosage = it; if (dosageErr && it.isNotBlank()) dosageErr = false },
-                    label = { Text("Дозировка") },
-                    isError = dosageErr,
-                    supportingText = { if (dosageErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Форма — выпадающий список с подсветкой ошибки
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = form,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Форма") },
-                        isError = formErr,
-                        supportingText = { if (formErr) Text("Выберите форму", color = MaterialTheme.colorScheme.error) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        forms.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(option) },
-                                onClick = {
-                                    form = option
-                                    formErr = false
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = instructions,
-                    onValueChange = { instructions = it },
-                    label = { Text("Инструкция") },
-                    keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = stock,
-                    onValueChange = { stock = it; if (stockErr && it.isNotBlank()) stockErr = false },
-                    label = { Text("Остаток") },
-                    isError = stockErr,
-                    supportingText = { if (stockErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it; if (nameErr && it.isNotBlank()) nameErr = false },
+                        label = { Text("Название") },
+                        isError = nameErr,
+                        supportingText = { if (nameErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = dosage,
+                        onValueChange = { dosage = it; if (dosageErr && it.isNotBlank()) dosageErr = false },
+                        label = { Text("Дозировка") },
+                        isError = dosageErr,
+                        supportingText = { if (dosageErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
                     ) {
-                        AssistChip(
-                            onClick = { expiry = null; expiryErr = false },
-                            label = { Text("Без срока") },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (expiry == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.surface,
-                                labelColor = if (expiry == null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
+                        OutlinedTextField(
+                            value = form,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Форма") },
+                            isError = formErr,
+                            supportingText = { if (formErr) Text("Выберите форму", color = MaterialTheme.colorScheme.error) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
                         )
 
-                        AssistChip(
-                            onClick = { showMonthPicker = true },
-                            label = { Text(expiry?.let { monthYearDf.format(Date(it)) } ?: "Месяц / Год") },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (expiry != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                else MaterialTheme.colorScheme.surface,
-                                labelColor = if (expiry != null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    }
-
-                    // Быстрые пресеты: +1 / +2 / +3 / +5 лет
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1, 2, 3, 5).forEach { years ->
-                            AssistChip(
-                                onClick = {
-                                    expiry = plusYearsToEndOfMonth(years)
-                                    expiryErr = false
-                                },
-                                label = { Text("$years г.") }
-                            )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            forms.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option) },
+                                    onClick = {
+                                        form = option
+                                        formErr = false
+                                        expanded = false
+                                    }
+                                )
+                            }
                         }
                     }
 
-                    if (expiryErr) {
-                        Text(
-                            "Дата должна быть позже сегодняшнего дня",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    OutlinedTextField(
+                        value = instructions,
+                        onValueChange = { instructions = it },
+                        label = { Text("Инструкция") },
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    OutlinedTextField(
+                        value = stock,
+                        onValueChange = { stock = it; if (stockErr && it.isNotBlank()) stockErr = false },
+                        label = { Text("Остаток") },
+                        isError = stockErr,
+                        supportingText = { if (stockErr) Text("Обязательно заполните", color = MaterialTheme.colorScheme.error) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AssistChip(
+                                onClick = { expiry = null; expiryErr = false },
+                                label = { Text("Без срока") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (expiry == null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    else MaterialTheme.colorScheme.surface,
+                                    labelColor = if (expiry == null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+
+                            AssistChip(
+                                onClick = { showMonthPicker = true },
+                                label = { Text(expiry?.let { monthYearDf.format(Date(it)) } ?: "Месяц / Год") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (expiry != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                    else MaterialTheme.colorScheme.surface,
+                                    labelColor = if (expiry != null) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(1, 2, 3, 5).forEach { years ->
+                                AssistChip(
+                                    onClick = {
+                                        expiry = plusYearsToEndOfMonth(years)
+                                        expiryErr = false
+                                    },
+                                    label = { Text("$years г.") }
+                                )
+                            }
+                        }
+
+                        if (expiryErr) {
+                            Text(
+                                "Дата должна быть позже сегодняшнего дня",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
-                // ==== конец блока срока годности ====
+
+                Spacer(Modifier.height(12.dp))
+
+                // Кнопки
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = {
+                        // обязательность полей
+                        nameErr = name.isBlank()
+                        dosageErr = dosage.isBlank()
+                        formErr = form.isBlank()
+                        stockErr = stock.isBlank()
+                        // проверка даты: null допустимо; если есть — должна быть в будущем
+                        expiryErr = expiry?.let { it <= System.currentTimeMillis() } ?: false
+
+                        val ok = !(nameErr || dosageErr || formErr || stockErr || expiryErr)
+                        if (!ok) return@TextButton
+
+                        onSave(
+                            Medicine(
+                                id = initial?.id ?: 0L,
+                                userId = userId,
+                                name = name.trim(),
+                                nameNorm = name.trim().lowercase(Locale.getDefault()),
+                                dosage = dosage.trim(),
+                                form = form.trim(),
+                                instructions = instructions.ifBlank { null },
+                                expiresAt = expiry,
+                                stockQty = stock.toIntOrNull() ?: 0
+                            )
+                        )
+                    }) { Text("Сохранить") }
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                // простая обязательность полей
-                nameErr = name.isBlank()
-                dosageErr = dosage.isBlank()
-                formErr = form.isBlank()
-                stockErr = stock.isBlank()
+        }
+    }
 
-                // проверка даты: null допустимо; если есть — должна быть в будущем
-                expiryErr = expiry?.let { it <= System.currentTimeMillis() } ?: false
-
-                val ok = !(nameErr || dosageErr || formErr || stockErr || expiryErr)
-                if (!ok) return@TextButton
-
-                onSave(
-                    Medicine(
-                        id = initial?.id ?: 0L,
-                        userId = userId,
-                        name = name.trim(),
-                        nameNorm = name.trim().lowercase(Locale.getDefault()),
-                        dosage = dosage.trim(),
-                        form = form.trim(),
-                        instructions = instructions.ifBlank { null },
-                        expiresAt = expiry, // null = «без срока»
-                        stockQty = stock.toIntOrNull() ?: 0
-                    )
-                )
-            }) { Text("Сохранить") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
-    )
-
-    // Диалог выбора Месяц/Год
+    // Диалог выбора Месяц/Год — оставляем как был
     if (showMonthPicker) {
         MonthYearPickerDialog(
             initialMillis = expiry,

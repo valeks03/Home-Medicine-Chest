@@ -4,14 +4,12 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
@@ -19,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homemedicinechest.App
@@ -29,6 +26,8 @@ import com.example.homemedicinechest.data.repo.MedicinesRepository
 import com.example.homemedicinechest.ui.theme.* // Purple40, Lavender, etc.
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.text.style.TextOverflow
 import com.example.homemedicinechest.data.repo.ScheduleRepository
 import com.example.homemedicinechest.features.reminders.ReminderScheduler
 import java.text.SimpleDateFormat
@@ -259,6 +258,8 @@ private fun MedicineCard(
 
             }
             Text(expiryText, style = MaterialTheme.typography.bodySmall)
+
+            Spacer(Modifier.height(4.dp))
             MedicineSchedulesBlock(m.id)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -304,45 +305,47 @@ private fun MedicineSchedulesBlock(medicineId: Long) {
         schedules.forEach { s ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // ЛЕВО: время + дни + доза, в одну строку, с троеточием
                 Text(
                     text = buildString {
                         append(String.format("%02d:%02d", s.hour, s.minute))
                         if (s.daysMask != 0) append(" · ").append(daysMaskLabel(s.daysMask))
                         s.dose?.let { append(" · ").append(it) }
                     },
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(
-                        checked = s.enabled,
-                        onCheckedChange = { checked ->
-                            scope.launch {
-                                val upd = s.copy(enabled = checked)
-                                dao.update(upd)
-                                if (checked) ReminderScheduler.scheduleNext(ctx, upd)
-                                else ReminderScheduler.cancel(ctx, s)
-                            }
-                        }
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = {
+
+                // ПРАВО: тумблер и иконка удаления
+                Switch(
+                    checked = s.enabled,
+                    onCheckedChange = { checked ->
                         scope.launch {
-                            // снять будильник и удалить из БД
-                            ReminderScheduler.cancel(ctx, s)
-                            dao.delete(s)
+                            val upd = s.copy(enabled = checked)
+                            dao.update(upd)
+                            if (checked) ReminderScheduler.scheduleNext(ctx, upd)
+                            else ReminderScheduler.cancel(ctx, s)
                         }
-                    }) { Text("Удалить") }
+                    }
+                )
+                IconButton(onClick = {
+                    scope.launch {
+                        ReminderScheduler.cancel(ctx, s)
+                        dao.delete(s)
+                    }
+                }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Удалить расписание")
                 }
             }
         }
     }
 }
-
 private fun daysMaskLabel(mask: Int): String {
     // Пн(1<<0)..Вс(1<<6)
     val names = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
-    return names.mapIndexedNotNull { i, n -> if (mask and (1 shl i) != 0) n else null }.joinToString(",")
+    return names.mapIndexedNotNull { i, n -> if (mask and (1 shl i) != 0) n else null }.joinToString(" ")
 }

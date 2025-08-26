@@ -97,6 +97,9 @@ class ReminderReceiver : BroadcastReceiver() {
                     status = status
                 )
             )
+            val nm = ctx.getSystemService(NotificationManager::class.java)
+            nm.cancel(scheduleId.toInt())
+
             app.db.scheduleDao().getById(scheduleId)?.let { s ->
                 ReminderScheduler.scheduleNext(ctx, s)
             }
