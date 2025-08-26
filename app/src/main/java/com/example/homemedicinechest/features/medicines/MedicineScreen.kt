@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.*
@@ -17,30 +18,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.homemedicinechest.App
 import com.example.homemedicinechest.R
 import com.example.homemedicinechest.data.db.Medicine
 import com.example.homemedicinechest.data.repo.MedicinesRepository
-import com.example.homemedicinechest.ui.theme.* // Purple40, Lavender, etc.
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.ui.text.style.TextOverflow
 import com.example.homemedicinechest.data.repo.ScheduleRepository
 import com.example.homemedicinechest.features.reminders.ReminderScheduler
+import com.example.homemedicinechest.ui.theme.Purple40
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.combinedClickable
 import java.text.SimpleDateFormat
 import java.util.*
 
+private enum class SortMode { NAME, EXPIRY }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MedicinesScreen(userId: Long,
-                    onLogout: () -> Unit = {},
-                    showOwnTopBar: Boolean = false,
-                    showOwnFab: Boolean = true,
-                    topBarActions: @Composable RowScope.() -> Unit = {},
-                    searchQuery: String = ""
+fun MedicinesScreen(
+    userId: Long,
+    onLogout: () -> Unit = {},
+    showOwnTopBar: Boolean = false,
+    showOwnFab: Boolean = true,
+    topBarActions: @Composable RowScope.() -> Unit = {},
+    searchQuery: String = ""
 ) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as App
     val repo = remember { MedicinesRepository(app.db.medicineDao()) }
@@ -52,6 +55,7 @@ fun MedicinesScreen(userId: Long,
     var menuExpanded by remember { mutableStateOf(false) }
     var scheduleFor by remember { mutableStateOf<Medicine?>(null) }
     val scheduleRepo = remember { ScheduleRepository(app.db.scheduleDao()) }
+    var sortMode by remember { mutableStateOf(SortMode.NAME) }
 
     val view = remember {
         object : MedicinesView {
@@ -60,7 +64,6 @@ fun MedicinesScreen(userId: Long,
             override fun render(list_: List<Medicine>) { list = list_ }
         }
     }
-
 
     scheduleFor?.let { med ->
         ScheduleEditDialog(
@@ -96,10 +99,7 @@ fun MedicinesScreen(userId: Long,
                     ),
                     actions = {
                         IconButton(onClick = { menuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Меню"
-                            )
+                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Меню")
                         }
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
@@ -115,16 +115,14 @@ fun MedicinesScreen(userId: Long,
             if (showOwnFab) {
                 FloatingActionButton(
                     onClick = { editing = null; showEditor = true },
-                    modifier = Modifier
-                        .padding(8.dp)
-                ) {
-                    Text("+", fontSize = 20.sp)
-                }
+                    modifier = Modifier.padding(8.dp)
+                ) { Text("+", fontSize = 20.sp) }
             }
         }
     ) { innerPadding ->
         val extraFabSpace = 104.dp
 
+        // Фильтр по поиску
         val filtered = remember(list, searchQuery) {
             val q = searchQuery.trim().lowercase()
             if (q.isEmpty()) list
@@ -136,35 +134,94 @@ fun MedicinesScreen(userId: Long,
             }
         }
 
+        // Разбиваем на просроченные/актуальные и сортируем; просроченные всегда сверху
+        val finalList = remember(filtered, sortMode) {
+            val now = System.currentTimeMillis()
+            val (expired, active) = filtered.partition { it.expiresAt?.let { ts -> ts < now } == true }
 
-        LazyColumn(
+            val expiredSorted = when (sortMode) {
+                SortMode.NAME ->
+                    expired.sortedBy { it.nameNorm ?: it.name.lowercase(Locale.getDefault()) }
+                SortMode.EXPIRY ->
+                    expired.sortedWith(
+                        compareBy<Medicine> { it.expiresAt } // более ранние просрочки раньше
+                            .thenBy { it.nameNorm ?: it.name.lowercase(Locale.getDefault()) }
+                    )
+            }
+            val activeSorted = when (sortMode) {
+                SortMode.NAME ->
+                    active.sortedBy { it.nameNorm ?: it.name.lowercase(Locale.getDefault()) }
+                SortMode.EXPIRY ->
+                    active.sortedWith(
+                        compareBy<Medicine> { it.expiresAt == null } // null (без срока) — в конец
+                            .thenBy { it.expiresAt ?: Long.MAX_VALUE }
+                            .thenBy { it.nameNorm ?: it.name.lowercase(Locale.getDefault()) }
+                    )
+            }
+            expiredSorted + activeSorted
+        }
+
+        // Обёртка: чипы сортировки + список
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 8.dp,
-                bottom = innerPadding.calculateBottomPadding() + extraFabSpace
-            ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 12.dp)
         ) {
-            if (filtered.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier.fillParentMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(if (searchQuery.isEmpty()) "Добавьте первое лекарство" else "Ничего не найдено")
-                    }
-                }
-            } else {
-                items(filtered) { m ->
-                    MedicineCard(
-                        m,
-                        onClick = { editing = m; showEditor = true },
-                        onDelete = { scope.launch { presenter.delete(m) } },
-                        onForceExpire = { forced -> scope.launch { presenter.addOrUpdate(forced) } },
-                        onSchedule = { scheduleFor = m }
+            // Переключатель сортировки
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = innerPadding.calculateTopPadding(), bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AssistChip(
+                    onClick = { sortMode = SortMode.NAME },
+                    label = { Text("По названию") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (sortMode == SortMode.NAME)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.surface
                     )
+                )
+                AssistChip(
+                    onClick = { sortMode = SortMode.EXPIRY },
+                    label = { Text("По сроку") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (sortMode == SortMode.EXPIRY)
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        else MaterialTheme.colorScheme.surface
+                    )
+                )
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = innerPadding.calculateBottomPadding() + extraFabSpace
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (finalList.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(if (searchQuery.isEmpty()) "Добавьте первое лекарство" else "Ничего не найдено")
+                        }
+                    }
+                } else {
+                    items(finalList) { m ->
+                        MedicineCard(
+                            m = m,
+                            onClick = { editing = m; showEditor = true },
+                            onDelete = { scope.launch { presenter.delete(m) } },
+                            onForceExpire = { forced -> scope.launch { presenter.addOrUpdate(forced) } },
+                            onSchedule = { scheduleFor = m }
+                        )
+                    }
                 }
             }
         }
@@ -198,14 +255,11 @@ private fun MedicineCard(
     val expired = m.expiresAt?.let { it < System.currentTimeMillis() } == true
 
     val containerColor =
-        if (expired) MaterialTheme.colorScheme.errorContainer
-        else MaterialTheme.colorScheme.surface
+        if (expired) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface
     val contentColor =
-        if (expired) MaterialTheme.colorScheme.onErrorContainer
-        else MaterialTheme.colorScheme.onSurface
+        if (expired) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
     val borderColor =
-        if (expired) MaterialTheme.colorScheme.error
-        else Purple40.copy(alpha = 0.30f)
+        if (expired) MaterialTheme.colorScheme.error else Purple40.copy(alpha = 0.30f)
 
     Card(
         modifier = Modifier
@@ -255,15 +309,18 @@ private fun MedicineCard(
                 m.expiresAt == null -> "Без срока"
                 expired -> "Просрочено: ${df.format(Date(m.expiresAt!!))}"
                 else -> "Годен до: ${df.format(Date(m.expiresAt!!))}"
-
             }
             Text(expiryText, style = MaterialTheme.typography.bodySmall)
 
             Spacer(Modifier.height(4.dp))
-            MedicineSchedulesBlock(m.id)
+            // Блок расписаний: тумблеры отключены для просроченных
+            MedicineSchedulesBlock(m.id, expired)
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { onSchedule() }) { Text("Расписание") }
+                TextButton(
+                    onClick = { onSchedule() },
+                    enabled = !expired // расписание нельзя для просроченных
+                ) { Text("Расписание") }
                 Spacer(Modifier.width(8.dp))
                 TextButton(onClick = onDelete) { Text("Удалить") }
             }
@@ -272,26 +329,7 @@ private fun MedicineCard(
 }
 
 @Composable
-private fun ScheduleBadges(medicineId: Long) {
-    val app = LocalContext.current.applicationContext as App
-    val dao = remember { app.db.scheduleDao() }
-    val schedules by dao.observeForMedicine(medicineId).collectAsState(initial = emptyList())
-    if (schedules.isEmpty()) return
-
-    val times = schedules
-        .filter { it.enabled }
-        .sortedWith(compareBy({ it.hour }, { it.minute }))
-        .joinToString("  ") { String.format("%02d:%02d", it.hour, it.minute) }
-
-    Text(
-        text = "Расписание: $times",
-        style = MaterialTheme.typography.labelMedium
-    )
-}
-
-
-@Composable
-private fun MedicineSchedulesBlock(medicineId: Long) {
+private fun MedicineSchedulesBlock(medicineId: Long, expired: Boolean) {
     val ctx = LocalContext.current
     val app = ctx.applicationContext as App
     val dao = remember { app.db.scheduleDao() }
@@ -307,7 +345,6 @@ private fun MedicineSchedulesBlock(medicineId: Long) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ЛЕВО: время + дни + доза, в одну строку, с троеточием
                 Text(
                     text = buildString {
                         append(String.format("%02d:%02d", s.hour, s.minute))
@@ -320,19 +357,22 @@ private fun MedicineSchedulesBlock(medicineId: Long) {
                     modifier = Modifier.weight(1f)
                 )
 
-                // ПРАВО: тумблер и иконка удаления
                 Switch(
                     checked = s.enabled,
+                    enabled = !expired, // нельзя менять расписание у просроченных
                     onCheckedChange = { checked ->
-                        scope.launch {
-                            val upd = s.copy(enabled = checked)
-                            dao.update(upd)
-                            if (checked) ReminderScheduler.scheduleNext(ctx, upd)
-                            else ReminderScheduler.cancel(ctx, s)
+                        if (!expired) {
+                            scope.launch {
+                                val upd = s.copy(enabled = checked)
+                                dao.update(upd)
+                                if (checked) ReminderScheduler.scheduleNext(ctx, upd)
+                                else ReminderScheduler.cancel(ctx, s)
+                            }
                         }
                     }
                 )
                 IconButton(onClick = {
+                    // Удалять расписание можно всегда
                     scope.launch {
                         ReminderScheduler.cancel(ctx, s)
                         dao.delete(s)
@@ -344,8 +384,10 @@ private fun MedicineSchedulesBlock(medicineId: Long) {
         }
     }
 }
+
 private fun daysMaskLabel(mask: Int): String {
-    // Пн(1<<0)..Вс(1<<6)
     val names = listOf("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
-    return names.mapIndexedNotNull { i, n -> if (mask and (1 shl i) != 0) n else null }.joinToString(" ")
+    return names
+        .mapIndexedNotNull { i, n -> if (mask and (1 shl i) != 0) n else null }
+        .joinToString(" ")
 }
