@@ -54,7 +54,7 @@ class ReminderReceiver : BroadcastReceiver() {
         )
 
         val notif = NotificationCompat.Builder(ctx, "reminders")
-            .setSmallIcon(R.mipmap.ic_launcher) // или R.mipmap.ic_launcher
+            .setSmallIcon(R.drawable.baseline_medication_24)
             .setContentTitle(ctx.getString(R.string.app_name))
             .setContentText("Время принять лекарство")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
