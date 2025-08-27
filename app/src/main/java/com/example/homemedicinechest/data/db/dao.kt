@@ -40,6 +40,9 @@ interface MedicineDao {
 
     @Query("SELECT * FROM Medicine WHERE expiresAt IS NOT NULL AND expiresAt BETWEEN :from AND :to AND userId=:userId")
     suspend fun expiringBetween(userId: Long, from: Long, to: Long): List<Medicine>
+
+    @Query("SELECT * FROM Medicine WHERE userId=:userId ORDER BY nameNorm, name")
+    fun observeByUser(userId: Long): Flow<List<Medicine>>
 }
 
 @Dao
@@ -101,17 +104,48 @@ interface ScheduleDao {
 
 @Dao
 interface IntakeLogDao {
-    @Insert
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(log: IntakeLog): Long
 
+    // История (с фильтром по препарату и периоду)
     @Query("""
         SELECT * FROM IntakeLog
-        WHERE userId=:userId
+        WHERE userId = :userId
+          AND (:medicineId IS NULL OR medicineId = :medicineId)
+          AND plannedAt BETWEEN :from AND :to
         ORDER BY plannedAt DESC
-        LIMIT :limit
     """)
-    fun observeRecent(userId: Long, limit: Int = 200): Flow<List<IntakeLog>>
+    fun observeLogs(
+        userId: Long,
+        medicineId: Long?,
+        from: Long,
+        to: Long
+    ): Flow<List<IntakeLog>>
 
-    @Query("DELETE FROM IntakeLog WHERE userId=:userId")
-    suspend fun clearForUser(userId: Long)
+    // Сводка по дням: day = epochDay (UTC, через деление на миллисекунды в сутках)
+    @Query("""
+        SELECT (plannedAt / 86400000) AS day,
+               SUM(CASE WHEN status = 'TAKEN'  THEN 1 ELSE 0 END) AS taken,
+               SUM(CASE WHEN status = 'SKIPPED' THEN 1 ELSE 0 END) AS skipped
+        FROM IntakeLog
+        WHERE userId = :userId
+          AND (:medicineId IS NULL OR medicineId = :medicineId)
+          AND plannedAt BETWEEN :from AND :to
+        GROUP BY day
+        ORDER BY day ASC
+    """)
+    fun observeDailyStats(
+        userId: Long,
+        medicineId: Long?,
+        from: Long,
+        to: Long
+    ): Flow<List<DailyRow>>
 }
+
+// DTO для группировки по дню
+data class DailyRow(
+    val day: Long,     // epochDay = floor(ms / 86400000)
+    val taken: Int,
+    val skipped: Int
+)
