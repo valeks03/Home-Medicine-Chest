@@ -100,6 +100,13 @@ interface ScheduleDao {
 
     @Query("SELECT * FROM MedicationSchedule WHERE id=:id LIMIT 1")
     suspend fun getById(id: Long): MedicationSchedule?
+
+    @Query("UPDATE MedicationSchedule SET enabled = 0 WHERE medicineId = :medicineId")
+    suspend fun disableAllForMedicine(medicineId: Long)
+
+    @Query("SELECT * FROM MedicationSchedule WHERE medicineId = :medicineId")
+    suspend fun getByMedicine(medicineId: Long): List<MedicationSchedule>
+
 }
 
 @Dao

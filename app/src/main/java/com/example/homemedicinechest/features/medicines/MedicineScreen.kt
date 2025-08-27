@@ -261,6 +261,22 @@ private fun MedicineCard(
     val borderColor =
         if (expired) MaterialTheme.colorScheme.error else Purple40.copy(alpha = 0.30f)
 
+    val ctx = LocalContext.current
+    val app = ctx.applicationContext as App
+    val scheduleDao = remember { app.db.scheduleDao() }
+    val scope = rememberCoroutineScope()
+    var disabledByUi by remember { mutableStateOf(false) }
+    LaunchedEffect(expired) {
+        if (expired && !disabledByUi) {
+            disabledByUi = true
+            scope.launch {
+                scheduleDao.disableAllForMedicine(m.id)
+                val all = scheduleDao.getByMedicine(m.id)
+                ReminderScheduler.cancelAllForMedicine(ctx, all)
+            }
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()

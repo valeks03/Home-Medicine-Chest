@@ -68,6 +68,9 @@ object ReminderScheduler {
         }
     }
 
+    suspend fun cancelAllForMedicine(ctx: Context, schedules: List<MedicationSchedule>) {
+        schedules.forEach { cancel(ctx, it) }
+    }
 
     fun cancel(ctx: Context, schedule: MedicationSchedule) {
         val am = ctx.getSystemService(AlarmManager::class.java)
