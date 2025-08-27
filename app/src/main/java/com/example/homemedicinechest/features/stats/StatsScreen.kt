@@ -22,6 +22,7 @@ fun StatsScreen(userId: Long) {
     val app = androidx.compose.ui.platform.LocalContext.current.applicationContext as App
     val repo = remember { StatsRepository(app.db.intakeLogDao(), app.db.medicineDao()) }
     val presenter = remember { StatsPresenter(repo) }
+    var visibleCount by remember { mutableStateOf(20) }
 
     // Фильтры
     var selectedMedicineId by remember { mutableStateOf<Long?>(null) }
@@ -40,47 +41,75 @@ fun StatsScreen(userId: Long) {
         }
     }
 
+    LaunchedEffect(state?.logs, selectedMedicineId, daysBack) {
+        val size = state?.logs?.size ?: 0
+        visibleCount = minOf(10, size)
+    }
+
+
     DisposableEffect(userId, selectedMedicineId, from, to) {
         presenter.attach(view)
         presenter.observe(userId, selectedMedicineId, from, to)
         onDispose { presenter.detach() }
     }
 
-    Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-        // Фильтры (препарат + период)
-        FiltersBar(
-            state = state,
-            selectedMedicineId = selectedMedicineId,
-            onMedicineSelected = { selectedMedicineId = it },
-            daysBack = daysBack,
-            onDaysChange = { daysBack = it }
-        )
-
-        // Сводные карточки
-        state?.let { s ->
-            TotalsRow(s)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            FiltersBar(
+                state = state,
+                selectedMedicineId = selectedMedicineId,
+                onMedicineSelected = { selectedMedicineId = it },
+                daysBack = daysBack,
+                onDaysChange = { daysBack = it }
+            )
         }
 
-        // Ежедневная разбивка + история
-        if (loading && state == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+
+        state?.let { s ->
+            item { TotalsRow(s) }
+            item { AdherenceLineChart(daily = s.daily) }
+            item { DailyBarChart(daily = s.daily, showTitle = true) }
+            item { Divider() }
+            item { Text("История", style = MaterialTheme.typography.titleMedium) }
+
+            val logsToShow = s.logs.take(visibleCount)
+
+            items(
+                items = logsToShow,
+                key = { it.id } // если у IntakeLog нет id, удали key или подставь безопасный
+            ) { log ->
+                LogRow(log)
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                state?.let { s ->
-                    item { DailyBlock(s.daily) }
-                    item { Divider(Modifier.padding(vertical = 8.dp)) }
-                    item { Text("История", style = MaterialTheme.typography.titleMedium) }
-                    items(s.logs) { log -> LogRow(log) }
+
+            // Кнопки управления
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (visibleCount < s.logs.size) {
+                        TextButton(onClick = { visibleCount = minOf(visibleCount + 10, s.logs.size) }) {
+                            Text("Показать ещё")
+                        }
+                    } else if (s.logs.size > 10) {
+                        TextButton(onClick = { visibleCount = 10 }) {
+                            Text("Свернуть")
+                        }
+                    }
+                }
+            }
+        } ?: run {
+            item {
+                if (loading) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
         }
+
     }
 }
 
