@@ -187,12 +187,10 @@ private fun HomeNavHost(
         popEnterTransition = { slideInVertically(initialOffsetY = { full -> -full/4 }, animationSpec = tween(250)) + fadeIn() },
         popExitTransition  = { slideOutVertically(targetOffsetY = { full -> full }, animationSpec = tween(200)) + fadeOut() }
     ) {
-        // --- ПРОФИЛЬ ---
         composable(DrawerItem.Profile.route) {
             ProfileScreen(userId = userId)
         }
 
-        // --- МЕДИКАМЕНТЫ ---
         composable(DrawerItem.Medicines.route) {
             MedicinesScreen(
                 userId = userId,
@@ -203,7 +201,6 @@ private fun HomeNavHost(
             )
         }
 
-        // --- СТАТИСТИКА ---
         composable(DrawerItem.Stats.route) {
             StatsScreen(userId)
         }

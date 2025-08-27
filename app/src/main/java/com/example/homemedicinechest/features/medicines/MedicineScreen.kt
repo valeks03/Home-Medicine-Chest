@@ -87,6 +87,9 @@ fun MedicinesScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+        ),
         topBar = {
             if (showOwnTopBar) {
                 CenterAlignedTopAppBar(
@@ -120,7 +123,7 @@ fun MedicinesScreen(
             }
         }
     ) { innerPadding ->
-        val extraFabSpace = 104.dp
+        val bottomFabSpace = 88.dp
 
         // Фильтр по поиску
         val filtered = remember(list, searchQuery) {
@@ -199,7 +202,7 @@ fun MedicinesScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = 8.dp,
-                    bottom = innerPadding.calculateBottomPadding() + extraFabSpace
+                    bottom = bottomFabSpace
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

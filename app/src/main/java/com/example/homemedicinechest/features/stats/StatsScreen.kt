@@ -14,6 +14,8 @@ import com.example.homemedicinechest.data.db.DailyRow
 import com.example.homemedicinechest.data.db.IntakeLog
 import com.example.homemedicinechest.data.repo.StatsBundle
 import com.example.homemedicinechest.data.repo.StatsRepository
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.text.style.TextOverflow
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,7 +26,6 @@ fun StatsScreen(userId: Long) {
     val presenter = remember { StatsPresenter(repo) }
     var visibleCount by remember { mutableStateOf(20) }
 
-    // Фильтры
     var selectedMedicineId by remember { mutableStateOf<Long?>(null) }
     var daysBack by remember { mutableStateOf(30) } // период: 7/30/90
     val now = remember { System.currentTimeMillis() }
@@ -121,54 +122,115 @@ private fun FiltersBar(
     daysBack: Int,
     onDaysChange: (Int) -> Unit
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Препарат
-        var expanded by remember { mutableStateOf(false) }
-        val label = state?.let { s ->
-            if (selectedMedicineId == null) "Все препараты"
-            else s.medicines.find { it.id == selectedMedicineId }?.name ?: "Все препараты"
-        } ?: "Все препараты"
+    BoxWithConstraints {
+        val isNarrow = this.maxWidth < 420.dp
 
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-            OutlinedTextField(
-                value = label,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Препарат") },
-                modifier = Modifier.menuAnchor().weight(1f)
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(text = { Text("Все препараты") }, onClick = { onMedicineSelected(null); expanded = false })
-                state?.medicines?.forEach { m ->
-                    DropdownMenuItem(text = { Text(m.name) }, onClick = { onMedicineSelected(m.id); expanded = false })
-                }
+        if (isNarrow) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MedicineSelectorField(state, selectedMedicineId, onMedicineSelected,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                PeriodSelectorField(daysBack, onDaysChange,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-        }
-
-        // Период
-        var expandedPeriod by remember { mutableStateOf(false) }
-        val periodLabel = when (daysBack) { 7 -> "7 дней"; 30 -> "30 дней"; 90 -> "90 дней"; else -> "$daysBack дн." }
-
-        ExposedDropdownMenuBox(expanded = expandedPeriod, onExpandedChange = { expandedPeriod = !expandedPeriod }) {
-            OutlinedTextField(
-                value = periodLabel,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Период") },
-                modifier = Modifier.menuAnchor().width(130.dp)
-            )
-            ExposedDropdownMenu(expanded = expandedPeriod, onDismissRequest = { expandedPeriod = false }) {
-                listOf(7, 30, 90).forEach { d ->
-                    DropdownMenuItem(text = { Text("$d дней") }, onClick = { onDaysChange(d); expandedPeriod = false })
-                }
+        } else {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MedicineSelectorField(
+                    state, selectedMedicineId, onMedicineSelected,
+                    modifier = Modifier
+                        .weight(1f)
+                        .alignByBaseline()
+                )
+                // «Период» делаем компактным и не ломающимся
+                PeriodSelectorField(
+                    daysBack, onDaysChange,
+                    modifier = Modifier
+                        .widthIn(min = 132.dp, max = 160.dp) // достаточно для «90 дней»
+                        .alignByBaseline()
+                )
             }
         }
     }
 }
+
+
+@Composable
+private fun MedicineSelectorField(
+    state: StatsBundle?,
+    selectedMedicineId: Long?,
+    onMedicineSelected: (Long?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val label = state?.let { s ->
+        if (selectedMedicineId == null) "Все препараты"
+        else s.medicines.find { it.id == selectedMedicineId }?.name ?: "Все препараты"
+    } ?: "Все препараты"
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = label,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Препарат") },
+            singleLine = true,
+            modifier = modifier.menuAnchor(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text("Все препараты") }, onClick = { onMedicineSelected(null); expanded = false })
+            state?.medicines?.forEach { m ->
+                DropdownMenuItem(text = { Text(m.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    onClick = { onMedicineSelected(m.id); expanded = false })
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun PeriodSelectorField(
+    daysBack: Int,
+    onDaysChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val periodLabel = when (daysBack) {
+        7 -> "7 дней"
+        30 -> "30 дней"
+        90 -> "90 дней"
+        else -> "$daysBack дн."
+    }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = periodLabel,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text("Период", maxLines = 1, overflow = TextOverflow.Clip) },
+            modifier = modifier.menuAnchor(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            listOf(7, 30, 90).forEach { d ->
+                DropdownMenuItem(
+                    text = { Text("$d дней") },
+                    onClick = { onDaysChange(d); expanded = false }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun TotalsRow(state: StatsBundle) {

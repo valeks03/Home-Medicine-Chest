@@ -30,6 +30,10 @@ android {
 
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+
+
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.1")
     implementation("androidx.compose.material:material-icons-extended")
@@ -55,6 +59,7 @@ dependencies {
     kapt("androidx.room:room-compiler:2.6.1")
 
 
-// WorkManager (для фоновой синхронизации, опционально)
+// WorkManager (для фоновой синхронизации)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+    testImplementation(kotlin("test"))
 }
